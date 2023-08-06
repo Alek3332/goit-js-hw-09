@@ -1,58 +1,58 @@
 import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.min.css';
 import Notiflix from 'notiflix';
-import 'notiflix/dist/notiflix-3.2.6.min.css';
-// console.log(Notiflix);
 
-const selectors = {
-  input: document.querySelector('#datetime-picker'),
-  button: document.querySelector('button[data-start]'),
-  days: document.querySelector('span[data-days]'),
-  hours: document.querySelector('span[data-hours]'),
-  minutes: document.querySelector('span[data-minutes]'),
-  seconds: document.querySelector('span[data-seconds]'),
-};
+const date = document.querySelector('#datetime-picker');
+const btn = document.querySelector('[data-start]');
+const day = document.querySelector('[data-days]');
+const hour = document.querySelector('[data-hours]');
+const min = document.querySelector('[data-minutes]');
+const sec = document.querySelector('[data-seconds]');
+const spans = document.querySelectorAll('.value');
 
-const options = {
+let timerId = null;
+
+btn.disabled = true;
+
+flatpickr(date, {
   enableTime: true,
   time_24hr: true,
   defaultDate: new Date(),
   minuteIncrement: 1,
   onClose(selectedDates) {
-    console.log(selectedDates[0]);
-    if (options.defaultDate >= selectedDates[0]) {
-      selectors.button.disabled = true;
+    if (selectedDates[0] <= Date.now()) {
       Notiflix.Notify.failure('Please choose a date in the future');
+      btn.disabled = true;
     } else {
-      selectors.button.disabled = false;
+      btn.disabled = false;
+
+      Notiflix.Notify.success('Lets go?');
     }
   },
-};
+});
 
-const calendar = flatpickr('#datetime-picker', options);
-let timerID = null;
+btn.addEventListener('click', onBtnStartClick);
 
-selectors.button.disabled = true;
-selectors.button.addEventListener('click', runTimer);
+function onBtnStartClick() {
+  spans.forEach(item => item.classList.toggle('end'));
+  btn.disabled = true;
+  date.disabled = true;
+  timerId = setInterval(() => {
+    const choosenDate = new Date(date.value);
+    const timeToFinish = choosenDate - Date.now();
+    const { days, hours, minutes, seconds } = convertMs(timeToFinish);
 
-function runTimer(evt) {
-  evt.target.disabled = true;
+    day.textContent = addLeadingZero(days);
+    hour.textContent = addLeadingZero(hours);
+    min.textContent = addLeadingZero(minutes);
+    sec.textContent = addLeadingZero(seconds);
 
-  timerID = setInterval(() => {
-    const currentDate = new Date();
-    // console.log(currentDate);
-    const targetDate = calendar.selectedDates[0];
-    // console.log(targetDate);
-    const deltaTime = targetDate - currentDate;
-    const time = convertMs(deltaTime);
-    // console.log(time);
-
-    updateTimerInterface(time);
+    if (timeToFinish < 1000) {
+      spans.forEach(item => item.classList.toggle('end'));
+      clearInterval(timerId);
+      date.disabled = false;
+    }
   }, 1000);
-  if (calendar.selectedDates[0] - new Date() <= 0) {
-    clearInterval(timerID);
-    evt.target.disabled = false;
-  }
 }
 
 function convertMs(ms) {
@@ -63,26 +63,17 @@ function convertMs(ms) {
   const day = hour * 24;
 
   // Remaining days
-  const days = addLeadingZero(Math.floor(ms / day));
+  const days = Math.floor(ms / day);
   // Remaining hours
-  const hours = addLeadingZero(Math.floor((ms % day) / hour));
+  const hours = Math.floor((ms % day) / hour);
   // Remaining minutes
-  const minutes = addLeadingZero(Math.floor(((ms % day) % hour) / minute));
+  const minutes = Math.floor(((ms % day) % hour) / minute);
   // Remaining seconds
-  const seconds = addLeadingZero(
-    Math.floor((((ms % day) % hour) % minute) / second)
-  );
+  const seconds = Math.floor((((ms % day) % hour) % minute) / second);
 
   return { days, hours, minutes, seconds };
 }
 
 function addLeadingZero(value) {
-  return String(value).padStart(2, '0');
-}
-
-function updateTimerInterface({ days, hours, minutes, seconds }) {
-  selectors.days.textContent = `${days}`;
-  selectors.hours.textContent = `${hours}`;
-  selectors.minutes.textContent = `${minutes}`;
-  selectors.seconds.textContent = `${seconds}`;
+  return `${value}`.padStart(2, '0');
 }
